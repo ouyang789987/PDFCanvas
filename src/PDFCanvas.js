@@ -43,9 +43,6 @@ var PDFCanvas = (function(){
 		} else {
 			throw( 'Unable to parse color style: ' + style );
 		}
-		cR = cR / 255.0;
-		cG = cG / 255.0;
-		cB = cB / 255.0;
 		return {
 			r: cR, g: cG, b: cB, 
 			a: cA
@@ -53,9 +50,9 @@ var PDFCanvas = (function(){
 	}
 
 	var colorToColorString = function ( c, a ) {
-		var cs = parseInt(c.r*255) + ',' +
-				 parseInt(c.g*255) + ',' +
-				 parseInt(c.b*255);
+		var cs = parseInt(c.r) + ',' +
+				 parseInt(c.g) + ',' +
+				 parseInt(c.b);
 
 		if ( a !== 1.0 ) {
 			return 'rgba(' + cs + ',' + a + ')';
@@ -81,21 +78,20 @@ var PDFCanvas = (function(){
 			silver : colorStringToColor('#C0C0C0'), 
 			teal : colorStringToColor('#008080'), 
 			white : colorStringToColor('#FFFFFF'), 
-			yellow : colorStringToColor('#FFFF00'),
-			transparent : colorStringToColor('#ffffffff')
+			yellow : colorStringToColor('#FFFF00')
 		}
 	})();
 
 	var testColorConversion = function () {
 		console.log( 'Testing color style to color conversion ...' );
 		var tests = [
-			['#ff00ff',{r:1,g:0,b:1}],
-			['#f0f',{r:1,g:0,b:1}],
-			['#eeff00ff',{r:1,g:0,b:1,a:(238/255.0)}],
-			['rgb(255,255,0)',{r:1,g:1,b:0}],
-			['rgba(255,0,0,255)',{r:1,g:0,b:0,a:1}],
-			['rgba(255,0,0,0.5)',{r:1,g:0,b:0,a:0.5}],
-			['red',{r:1,g:0,b:0}]
+			['#ff00ff',				{r:255,g:0,b:255}],
+			['#f0f',				{r:255,g:0,b:255}],
+			['#eeff00ff',			{r:255,g:0,b:255,a:(238/255.0)}],
+			['rgb(255,255,0)',		{r:255,g:255,b:0}],
+			['rgba(255,0,0,255)',	{r:255,g:0,b:0,a:1}], // is this legal?
+			['rgba(255,0,0,0.5)',	{r:255,g:0,b:0,a:0.5}],
+			['red',					{r:255,g:0,b:0}]
 		];
 		for ( var i = 0, k = tests.length; i < k; i++ ) {
 			var r = colorStringToColor( tests[i][0] );
@@ -143,9 +139,9 @@ var PDFCanvas = (function(){
 
 	var setStyleFromStack = function () {
 		//
-		jsPdf.setFillColor( currentStyle.fill.r * 255, currentStyle.fill.g * 255, currentStyle.fill.b * 255 );
+		jsPdf.setFillColor( currentStyle.fill.r, currentStyle.fill.g, currentStyle.fill.b );
 		//
-		jsPdf.setDrawColor( currentStyle.stroke.r * 255, currentStyle.stroke.g * 255, currentStyle.stroke.b * 255 );
+		jsPdf.setDrawColor( currentStyle.stroke.r, currentStyle.stroke.g, currentStyle.stroke.b );
 		// jsPdf.setLineCap( currentStyle.lineCap );
 		// jsPdf.setLineJoin( currentStyle.lineJoin );
 		jsPdf.setLineWidth( currentStyle.lineWidth );
@@ -209,20 +205,59 @@ var PDFCanvas = (function(){
 	 + + + + + + + + + + + + + + + + + + + */
 
 	var PDFContextShapeRecorder = function () {
+		this.x = this.y = 0;
 		this.vertices = [];
+		this.location = [];
+		this.closed = false;
 	}
 	PDFContextShapeRecorder.prototype = {
 		moveTo : function ( x, y ) {
-			this.vertices.push( [x, y] );
+			// this.vertices.push([
+			// 	x, y
+			// ]);
+			this.x = x;
+			this.y = y;
+			this.location = [x, y];
 		},
 		lineTo : function ( x, y ) {
-			this.vertices.push( [x, y] );
+			this.vertices.push([
+				x-this.location[0], y-this.location[1]
+			]);
+			this.location[0] = x;
+			this.location[1] = y;
 		},
 		quadraticCurveTo : function ( cpx, cpy, x, y ) {
+			var cp1x, cp1y, cp2x, cp2y, s = 2.0/3.0;
+			
+			cp1x = this.location[0] + (s * (cpx - this.location[0]));
+			cp2x = x + (s * (cpx - x));
+
+			cp1y = this.location[1] + (s * (cpy - this.location[1]));
+			cp2y = y + (s * (cpy - y));
+			
+			this.vertices.push([
+				cp1x-this.location[0], cp1y-this.location[1],
+				cp2x-this.location[0], cp2y-this.location[1],
+				x-this.location[0], y-this.location[1]
+			]);
+			this.location[0] = x;
+			this.location[1] = y;
 		},
 		bezierCurveTo : function ( cp1x, cp1y, cp2x, cp2y, x, y ) {
+			this.vertices.push([
+				cp1x-this.location[0], cp1y-this.location[1],
+				cp2x-this.location[0], cp2y-this.location[1],
+				x-this.location[0], y-this.location[1]
+			]);
+			this.location[0] = x;
+			this.location[1] = y;
 		},
 		closePath : function () {
+			this.vertices.push(
+				this.vertices[0].x-this.location[0], 
+				this.vertices[0].y-this.location[1]
+			);
+			this.closed = true;
 		}
 	}
 
@@ -278,32 +313,32 @@ var PDFCanvas = (function(){
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-scale
 		// void scale (in float x, in float y);
-		scale : function () {
-
+		scale : function ( sx, sy ) {
+			throw( 'Not implemented yet' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-rotate
 		// void rotate (in float angle);
-		rotate : function () {
-
+		rotate : function ( angle ) {
+			throw( 'Not implemented yet' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-translate
 		// void translate (in float x, in float y);
-		translate : function () {
-
+		translate : function ( tx, ty ) {
+			throw( 'Not implemented yet' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-transform
 		// void transform (in float m11, in float m12, in float m21, in float m22, in float dx, in float dy); Requires Gecko 1.9
-		transform : function () {
-
+		transform : function ( m11, m12, m21, m22, dx, dy ) {
+			throw( 'Not implemented yet' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-settransform
 		// void setTransform (in float m11, in float m12, in float m21, in float m22, in float dx, in float dy); Requires Gecko 1.9
-		setTransform : function () {
-
+		setTransform : function ( m11, m12, m21, m22, dx, dy ) {
+			throw( 'Not implemented yet' );
 		},
 
 		/*
@@ -418,28 +453,30 @@ var PDFCanvas = (function(){
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-font
 		// attribute DOMString font; // (default 10px sans-serif)
 		get font () {
-
+			return currentStyle.fontSize + 'px ' + currentStyle.fontFamily;
 		},
 		set font ( aFont ) {
-
+			throw( 'Not implemented yet' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-textalign
 		// attribute DOMString textAlign; // "start", "end", "left", "right", "center" (default: "start")
 		get textAlign () {
-
+			return currentStyle.textAlign;
 		},
 		set textAlign ( align ) {
-
+			if ( isValidTextAlign(align) )
+				currentStyle.textAlign = align;
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-textbaseline
 		// attribute DOMString textBaseline; // "top", "hanging", "middle", "alphabetic", "ideographic", "bottom" (default: "alphabetic")
 		get textBaseline () {
-
+			return currentStyle.textBaseline;
 		},
 		set textBaseline ( baseLine ) {
-
+			if ( isValidTextBaseline(baseLine) )
+				currentStyle.textBaseline = baseLine;
 		},
 		// } interface CanvasDrawingStyles
 
@@ -451,37 +488,41 @@ var PDFCanvas = (function(){
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-shadowoffsetx
 		// shadowOffsetX	float	 
 		get shadowOffsetX () {
-
+			return currentStyle.shadowOffsetX;
 		},
 		set shadowOffsetX ( sx ) {
+			currentStyle.shadowOffsetX = sx;
 
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-shadowoffsety
 		// shadowOffsetY	float	
 		get shadowOffsetY () {
-
+			return currentStyle.shadowOffsetY;
 		},
 		set shadowOffsetY ( sy ) {
+			currentStyle.shadowOffsetY = sy;
 
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-shadowblur
 		// shadowBlur	float	 
 		get shadowBlur () {
-
+			return currentStyle.shadowBlur;
 		},
 		set shadowBlur ( sb ) {
-
+			currentStyle.shadowBlur = sb;
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-shadowcolor
 		// shadowColor	DOMString	
 		get shadowColor () {
-
+			return currentStyle.shadowColor;
 		},
 		set shadowColor ( sc ) {
-
+			var c = colorStringToColor( sc );
+			currentStyle.stroke = c;
+			currentStyle.shadowColor = c;
 		},
 
 		/*
@@ -524,14 +565,34 @@ var PDFCanvas = (function(){
 		// void fill ();
 		// fill(Path path);
 		fill : function () {
-
+			if ( shapeRecorder ) {
+				setStyleFromStack();
+				jsPdf.lines(
+					shapeRecorder.vertices,
+					shapeRecorder.x,
+					shapeRecorder.y,
+					[1.0,1.0],
+					'F'
+				);
+				shapeRecorder = null;
+			}
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-stroke
 		// void stroke ();
 		// void stroke(Path path);
 		stroke : function () {
-
+			if ( shapeRecorder ) {
+				setStyleFromStack();
+				jsPdf.lines(
+					shapeRecorder.vertices,
+					shapeRecorder.x,
+					shapeRecorder.y,
+					[1.0,1.0],
+					'S'
+				);
+				shapeRecorder = null;
+			}
 		},
 
 		// void drawSystemFocusRing(Element element);
@@ -578,7 +639,7 @@ var PDFCanvas = (function(){
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-quadraticcurveto
 		// void quadraticCurveTo(unrestricted double cpx, unrestricted double cpy, unrestricted double x, unrestricted double y);
 		quadraticCurveTo : function ( cpx, cpy, x, y ) {
-
+			shapeRecorder.quadraticCurveTo( cpx, cpy, x, y );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-beziercurveto
@@ -590,7 +651,8 @@ var PDFCanvas = (function(){
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-arcto
 		// void arcTo(unrestricted double x1, unrestricted double y1, unrestricted double x2, unrestricted double y2, unrestricted double radius); 
 		arcTo : function ( x1, y1, x2, y2, radius ) {
-
+			// http://www.dbp-consulting.com/tutorials/canvas/CanvasArcTo.html
+			throw( 'Not implemented yet.' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-rect
