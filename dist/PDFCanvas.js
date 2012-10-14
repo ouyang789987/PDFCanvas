@@ -1,5 +1,5 @@
 /**
- *	Release: 0.0.0, build: 91
+ *	Release: 0.0.0, build: 92
  */
 
 var PDFCanvas = (function(){
