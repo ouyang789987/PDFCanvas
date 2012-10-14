@@ -2,7 +2,9 @@ PDFCanvas
 
 =========
 
-A PDF class that implements the &lt;canvas&gt; API
+PDFCanvas implements the &lt;canvas&gt; API and renders into a PDF instead of a canvas tag.
+
+I made this as an attmpt at getting Processing.js to render to PDF files.
 
 ---------
 
@@ -12,3 +14,4 @@ First simple tests are working, what's NOT WORKING is:
 - transparency
 - text, fonts
 - images
+- pixel manipulations
