@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf8"/>
+		<title>PDFCanvas test 01</title>
+
+		<script type="text/javascript" src="../../external/jspdf/dist/jspdf.min.js"></script>
+		<script type="text/javascript" src="../../dist/PDFCanvas.js"></script>
+		<script type="text/javascript">
+			window.onload = function () {
+				var pdf = new PDFCanvas( 'pdf-canvas-container' );
+				pdf.test();
+				var domCanvas = document.getElementById('canvas-container').children[0];
+				for ( var c = [domCanvas, pdf], i = 0, k = c.length; i < k; i++ ) {
+					var canvas = c[i];
+					var ctx = canvas.getContext('2d');
+
+					ctx.fillStyle = "rgb(200,0,0)";
+					ctx.fillRect (10, 10, 55, 50);
+
+					ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
+					ctx.fillRect (30, 30, 55, 50);
+
+					ctx.fillStyle = "red";
+ 
+					ctx.beginPath();
+					ctx.moveTo(30, 30);
+					ctx.lineTo(150, 150);
+
+					ctx.bezierCurveTo(60, 70, 60, 70, 70, 150);
+					ctx.lineTo(30, 30);
+					ctx.fill();
+				}
+			}
+		</script>
+
+	</head>
+	<body>
+		<div id="canvas-container"><canvas></canvas></div>
+		<div id="pdf-canvas-container"></div>
+	</body>
+</html>

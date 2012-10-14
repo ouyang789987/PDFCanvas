@@ -1,0 +1,58 @@
+<project name="PDFCanvas" default="dist">
+
+	<property name="bin-dir" value="bin"/>
+	<property name="dist-dir" value="dist"/>
+	<property name="src-dir" value="src"/>
+	<property name="release" value="0.0.0"/>
+	
+	<property name="closureCompilerJar" value="/usr/local/closure/compiler.jar" />
+	<taskdef name="closure" classname="com.google.javascript.jscomp.ant.CompileTask" 
+			 classpath="${closureCompilerJar}">
+	</taskdef>
+
+	<target name="build">
+
+		<buildnumber file="util/build.number"/>
+		
+		<delete dir="${bin-dir}"/>
+		<delete dir="${dist-dir}"/>
+
+		<mkdir dir="${bin-dir}"/>
+		<mkdir dir="${dist-dir}"/>
+
+		<copy toDir="${bin-dir}">
+			<fileset file="${src-dir}/PDFCanvas.js"/>
+		</copy>
+
+		<closure compilationLevel="simple" 
+				warning="default" 
+		        debug="false" 
+		        prettyprint="true"
+		        output="${bin-dir}/PDFCanvas.min.js"
+		        languageIn="ECMASCRIPT5" >
+
+			<sources dir="${bin-dir}">
+				<file name="PDFCanvas.js" />
+			</sources>
+
+			<warning group="internetExplorerChecks" level="OFF" />
+		</closure>
+
+		<copy toDir="${dist-dir}">
+			<fileset file="${bin-dir}/PDFCanvas.min.js"/>
+		</copy>
+
+	</target>
+
+	<target name="dist" depends="build">
+		
+		<replaceregexp file="${bin-dir}/PDFCanvas.js" flags="g" match="@@build-number@@" replace="${build.number}" />
+		<replaceregexp file="${bin-dir}/PDFCanvas.js" flags="g" match="@@release-number@@" replace="${release}" />
+
+		<copy toDir="${dist-dir}">
+			<fileset file="${bin-dir}/PDFCanvas.js"/>
+		</copy>
+
+	</target>
+
+</project>
