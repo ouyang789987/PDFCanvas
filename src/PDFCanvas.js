@@ -141,6 +141,18 @@ var PDFCanvas = (function(){
 		].indexOf(compOp.toLowerCase()) !== -1);
 	}
 
+	var setStyleFromStack = function () {
+		//
+		jsPdf.setFillColor( currentStyle.fill.r * 255, currentStyle.fill.g * 255, currentStyle.fill.b * 255 );
+		//
+		jsPdf.setDrawColor( currentStyle.stroke.r * 255, currentStyle.stroke.g * 255, currentStyle.stroke.b * 255 );
+		// jsPdf.setLineCap( currentStyle.lineCap );
+		// jsPdf.setLineJoin( currentStyle.lineJoin );
+		jsPdf.setLineWidth( currentStyle.lineWidth );
+		//
+		//jsPdf.setTextColor( currentStyle.fill.r, currentStyle.fill.g, currentStyle.fill.b );
+	}
+
 	/*
 	 +	 Classes Style and StyleStack
 	 +
@@ -206,7 +218,12 @@ var PDFCanvas = (function(){
 		lineTo : function ( x, y ) {
 			this.vertices.push( [x, y] );
 		},
-
+		quadraticCurveTo : function ( cpx, cpy, x, y ) {
+		},
+		bezierCurveTo : function ( cp1x, cp1y, cp2x, cp2y, x, y ) {
+		},
+		closePath : function () {
+		}
 	}
 
 	/*
@@ -481,13 +498,15 @@ var PDFCanvas = (function(){
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-fillrect
 		// void fillRect (in float x, in float y, in float w, in float h);
 		fillRect : function ( x, y, w, h ) {
-
+			setStyleFromStack();
+			jsPdf.rect( x, y, w, h, 'F' );
 		},
 
 		// http://dev.w3.org/html5/2dcontext/#dom-context-2d-strokerect
 		// void strokeRect (in float x, in float y, in float w, in float h);
 		strokeRect : function ( x, y, w, h ) {
-
+			setStyleFromStack();
+			jsPdf.rect( x, y, w, h, 'S' );
 		},
 
 		/*
@@ -597,7 +616,7 @@ var PDFCanvas = (function(){
 		fillText : function () {
 			throw( 'Not implemented yet' );
 		},
-		
+
 		// void strokeText(DOMString text, unrestricted double x, unrestricted double y, optional unrestricted double maxWidth);
 		strokeText : function () {
 			throw( 'Not implemented yet' );
@@ -677,15 +696,23 @@ var PDFCanvas = (function(){
 			if ( !targetDomElement ) {
 				throw( 'Unable to find target dom element from ' + arguments[0] );
 			}
-			targetWidth = targetDomElement.outerWidth;
-			targetWidth = targetDomElement.outerHeight;
+			targetWidth = targetDomElement.offsetWidth;
+			targetHeight = targetDomElement.offsetHeight;
 		} else if ( arguments.length == 2 ) { // width, height
 			targetWidth  = parseInt( arguments[0] );
 			targetHeight = parseInt( arguments[1] );
 		}
+		
 		// initial setup
 		pdfCanvas = this;
-		jsPdf = new jsPDF();
+		pdfWidth = targetWidth;
+		pdfHeight = targetHeight;
+
+		jsPdf = new jsPDF(
+			targetHeight > targetWidth ? 'portrait' : 'landscape',
+			'pt',
+			[targetWidth, targetHeight]
+		);
 	}
 	PDFCanvas.prototype = {
 
@@ -699,9 +726,11 @@ var PDFCanvas = (function(){
 		},
 
 		toDataURL : function () {
-			var type = arguments[0];
-			if ( type !== 'application/pdf' ) {
+			var type = arguments[0] || undefined;
+			if ( type && type !== 'application/pdf' ) {
 				throw( 'Can only output generated PDF to data-url of type "application/pdf".' );
+			} else {
+				return jsPdf.output('datauristring');
 			}
 		},
 
